@@ -72,45 +72,33 @@ flatten_corr_mat <- function(cormat) {
 #' @author Begüm Topçuoğlu, \email{topcuoglu.begum@@gmail.com}
 #' @author Zena Lapp, \email{zenalapp@@umich.edu}
 #'
+
 group_correlated_features <- function(features, corr_thresh = 1,
                                       group_neg_corr = TRUE, corr_method = "spearman") {
   corr <- get_corr_feats(features,
-    corr_thresh = corr_thresh,
-    group_neg_corr = group_neg_corr,
-    corr_method = corr_method
+                         corr_thresh = corr_thresh,
+                         group_neg_corr = group_neg_corr,
+                         corr_method = corr_method
   )
-  corr <- dplyr::select_if(corr, !(names(corr) %in% c("corr")))
 
-  all_feats <- colnames(features)
-  corr_feats <- unique(c(corr$feature2, corr$feature1))
-  noncorr_feats <- all_feats[!all_feats %in% corr_feats]
-
-  grps <- as.list(noncorr_feats)
-  accounted_for <- rep(NA, length(all_feats))
-  af_length <- sum(!is.na(accounted_for))
-  c <- length(grps) + 1
-  for (i in corr_feats) {
-    if (i %in% accounted_for) next
-    feats <- unique(c(
-      i, corr$feature1[corr$feature2 == i],
-      corr$feature2[corr$feature1 == i]
-    ))
-    new_feats <- TRUE
-    while (new_feats) {
-      len_feats <- length(feats)
-      for (j in feats) {
-        feats <- unique(c(
-          feats, j, corr$feature1[corr$feature2 == j],
-          corr$feature2[corr$feature1 == j]
-        ))
-      }
-      new_feats <- length(feats) > len_feats
-    }
-    grps[[c]] <- feats
-    af_length_new <- sum(af_length, length(feats))
-    accounted_for[(af_length + 1):af_length_new] <- feats
-    af_length <- af_length_new
-    c <- c + 1
+  all_features <- colnames(features)
+  corr_features <- c(dplyr::pull(corr, feature1), 
+                     dplyr::pull(corr, feature2)) %>% 
+      unique
+  uncorr_feature <- all_features[!all_features %in% corr_features]
+  
+  pasted_corr_features <- c()
+  for(i in corr_features){
+    pasted_feat <- corr %>% 
+      dplyr::filter(feature1 == i | feature2 == i) %>% 
+      tidyr::pivot_longer(cols = c(feature1, feature2), 
+                          values_to = 'corr_feature') %>% 
+      dplyr::pull(corr_feature) %>% 
+      unique %>% 
+      sort %>% 
+      paste(collapse = '|')
+    pasted_corr_features <- c(pasted_corr_features, pasted_feat)
   }
-  return(sapply(grps, paste, collapse = "|"))
+  output <- c(unique(pasted_corr_features), uncorr_feature)
 }
+
