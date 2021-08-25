@@ -87,13 +87,15 @@ test_that("pbtick() updates the progress bar", {
 })
 
 test_that("radix_sort() order is stable regardless of locale", {
-  locale <- Sys.getlocale("LC_COLLATE")
-  invisible(Sys.setlocale("LC_COLLATE", "en_US.UTF-8"))
-  sort_enus <- radix_sort(c(letters, LETTERS))
+  current_locale <- Sys.getlocale("LC_COLLATE")
+  eng_locale <- ifelse(.Platform$OS.type == 'unix', "en_US.UTF-8", 'English')
+
+  invisible(Sys.setlocale("LC_COLLATE", eng_locale))
+  sort_eng <- radix_sort(c(letters, LETTERS))
   invisible(Sys.setlocale("LC_COLLATE", "C"))
   sort_c <- radix_sort(c(letters, LETTERS))
 
-  expect_equal(sort_enus, sort_c)
+  expect_equal(sort_eng, sort_c)
 
-  invisible(Sys.setlocale("LC_COLLATE", locale))
+  invisible(Sys.setlocale("LC_COLLATE", current_locale))
 })
